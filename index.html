@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kiến Trúc Sư Nhí - Ôn Tập Hình Hộp Chữ Nhật & Hình Lập Phương</title>
+  <meta name="description" content="Trò chơi toán học AI giúp học sinh ôn tập hình hộp chữ nhật, hình lập phương và diện tích xung quanh một cách vui nhộn.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏗️</text></svg>">
+  <link rel="stylesheet" href="styles.css?v=4">
+</head>
+<body>
+
+  <!-- Name Input Overlay -->
+  <div class="name-overlay" id="name-overlay">
+    <div class="name-modal">
+      <span class="name-modal-icon">🏗️</span>
+      <h2 class="name-modal-title">KIẾN TRÚC SƯ NHÍ</h2>
+      <p class="name-modal-desc">Chào bạn! Nhập tên để bắt đầu hành trình kiến trúc sư nhé!</p>
+      <div class="name-input-group">
+        <input type="text" id="player-name-input" class="name-input" placeholder="Nhập tên của bạn..." maxlength="30" autofocus>
+      </div>
+      <button class="btn-start-game" id="btn-start-game">🚀 Bắt đầu chơi</button>
+    </div>
+  </div>
+
+  <!-- Background Effects -->
+  <div class="bg-mesh"></div>
+  <div class="bg-particles"></div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Confetti Container -->
+  <div id="confetti-container" class="confetti-container"></div>
+
+  <!-- ==================== LANDING SCREEN ==================== -->
+  <div id="screen-landing" class="screen active">
+    <div class="landing-container">
+      <div class="game-logo">
+        <span class="logo-icon">🏗️</span>
+      </div>
+      <h1 class="game-title">KIẾN TRÚC SƯ NHÍ</h1>
+      <p class="game-subtitle">
+        Ôn tập <span>Hình hộp chữ nhật</span> &amp; <span>Hình lập phương</span> cùng AI
+      </p>
+
+      <!-- Player Welcome -->
+      <div class="player-welcome" id="player-welcome">
+        <span class="pw-avatar">👷</span>
+        <span class="pw-text">Xin chào, <strong id="player-name-display">Bạn</strong>!</span>
+        <button class="btn-new-player" id="btn-new-player" title="Người chơi mới">👤 Người chơi mới</button>
+      </div>
+
+      <div class="mode-cards">
+        <!-- Explore Card -->
+        <div class="mode-card explore" data-mode="explore">
+          <span class="card-icon">🔍</span>
+          <h2 class="card-title">KHÁM PHÁ</h2>
+          <p class="card-desc">Tương tác 3D - Xoay, zoom, khai triển hình hộp và hình lập phương. Tìm hiểu từng mặt và công thức.</p>
+        </div>
+
+        <!-- Quiz Card -->
+        <div class="mode-card quiz" data-mode="quiz">
+          <span class="card-icon">⚡</span>
+          <h2 class="card-title">THỬ THÁCH AI</h2>
+          <p class="card-desc">Trả lời câu hỏi do AI sinh ra. Đạt combo streak để nhân điểm. 3 cấp độ khó!</p>
+        </div>
+
+        <!-- Build Card -->
+        <div class="mode-card build" data-mode="build">
+          <span class="card-icon">🏗️</span>
+          <h2 class="card-title">XÂY DỰNG</h2>
+          <p class="card-desc">Nhập kích thước → Xem hình 3D → Tính diện tích xung quanh. Hoàn thành nhiệm vụ kiến trúc sư!</p>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-bar">
+        <div class="stat-item">
+          <div class="stat-value" id="stat-score">0</div>
+          <div class="stat-label">Điểm</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="stat-correct">0</div>
+          <div class="stat-label">Đúng</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="stat-answered">0</div>
+          <div class="stat-label">Đã làm</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="stat-accuracy">0%</div>
+          <div class="stat-label">Chính xác</div>
+        </div>
+      </div>
+
+      <!-- Play again / Reset -->
+      <div class="landing-actions">
+        <button class="btn-landing-action" id="btn-reset-progress">🔄 Chơi lại từ đầu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== EXPLORE SCREEN ==================== -->
+  <div id="screen-explore" class="screen">
+    <div class="game-header">
+      <button class="btn-back">← Quay lại</button>
+      <span class="header-title" style="color: var(--color-cyan);">🔍 KHÁM PHÁ 3D</span>
+      <span></span>
+    </div>
+
+    <div class="explore-container">
+      <!-- 3D Viewer -->
+      <div class="viewer-3d" id="explore-viewer">
+        <div class="viewer-hint">🖱️ Kéo để xoay • Scroll để zoom</div>
+      </div>
+
+      <!-- Control Panel -->
+      <div class="explore-panel">
+        <!-- Shape Selector -->
+        <div class="panel-card">
+          <h3>📐 Chọn hình</h3>
+          <div class="shape-selector">
+            <button class="shape-btn active" data-shape="box">
+              <span class="shape-emoji">📦</span>
+              Hình hộp CN
+            </button>
+            <button class="shape-btn" data-shape="cube">
+              <span class="shape-emoji">🧊</span>
+              Hình lập phương
+            </button>
+          </div>
+        </div>
+
+        <!-- Dimensions -->
+        <div class="panel-card">
+          <h3>📏 Kích thước</h3>
+          <div id="box-dims">
+            <div class="dim-control">
+              <div class="dim-label">
+                <span>Chiều dài (a)</span>
+                <span class="dim-value" id="val-a">4</span>
+              </div>
+              <input type="range" id="dim-a" min="1" max="10" step="0.5" value="4">
+            </div>
+            <div class="dim-control">
+              <div class="dim-label">
+                <span>Chiều rộng (b)</span>
+                <span class="dim-value" id="val-b">3</span>
+              </div>
+              <input type="range" id="dim-b" min="1" max="10" step="0.5" value="3">
+            </div>
+            <div class="dim-control">
+              <div class="dim-label">
+                <span>Chiều cao (c)</span>
+                <span class="dim-value" id="val-c">2</span>
+              </div>
+              <input type="range" id="dim-c" min="1" max="10" step="0.5" value="2">
+            </div>
+          </div>
+          <div id="cube-dims" style="display: none;">
+            <div class="dim-control">
+              <div class="dim-label">
+                <span>Cạnh (a)</span>
+                <span class="dim-value" id="val-cube-a">3</span>
+              </div>
+              <input type="range" id="dim-cube-a" min="1" max="10" step="0.5" value="3">
+            </div>
+          </div>
+        </div>
+
+        <!-- Info -->
+        <div class="panel-card">
+          <h3>📊 Thông tin</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="info-label">S xung quanh</div>
+              <div class="info-value" id="info-sxq">28</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">S toàn phần</div>
+              <div class="info-value" id="info-stp">52</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Thể tích</div>
+              <div class="info-value" id="info-v">24</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Tổng cạnh</div>
+              <div class="info-value" id="info-canhsum">36</div>
+            </div>
+          </div>
+
+          <div class="formula-display">
+            <div class="formula-title">Công thức diện tích xung quanh</div>
+            <div class="formula-text" id="formula-text">
+              S<sub>xq</sub> = 2 × (a + b) × c<br>
+              S<sub>xq</sub> = 2 × (4 + 3) × 2<br>
+              S<sub>xq</sub> = 2 × 7 × 2
+            </div>
+            <div class="formula-result" id="formula-result">= 28</div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="explore-actions">
+          <button class="btn-action" id="btn-wireframe">🔲 Wireframe</button>
+          <button class="btn-action active" id="btn-rotate">🔄 Xoay</button>
+        </div>
+        <div class="explore-actions">
+          <button class="btn-action" id="btn-net">📋 Khai triển</button>
+          <button class="btn-action" id="btn-reset-view">🎯 Reset</button>
+        </div>
+
+        <!-- Net diagram -->
+        <div id="net-container" class="net-diagram-container" style="display: none;">
+          <canvas id="net-canvas" class="net-canvas" width="400" height="300"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== QUIZ SCREEN ==================== -->
+  <div id="screen-quiz" class="screen">
+    <div class="game-header">
+      <button class="btn-back">← Quay lại</button>
+      <span class="header-title" style="color: var(--color-purple);">⚡ THỬ THÁCH AI</span>
+      <span></span>
+    </div>
+
+    <div class="quiz-container">
+      <!-- Difficulty Selector -->
+      <div class="difficulty-selector">
+        <button class="diff-btn easy active" data-diff="easy">🌱 Dễ</button>
+        <button class="diff-btn medium" data-diff="medium">🔥 Trung bình</button>
+        <button class="diff-btn hard" data-diff="hard">💀 Khó</button>
+      </div>
+
+      <!-- Progress -->
+      <div class="quiz-progress">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="quiz-progress-fill"></div>
+        </div>
+        <span class="progress-text" id="quiz-progress-text">1/10</span>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="quiz-stats">
+        <div class="quiz-stat streak">
+          <div class="qs-icon">🔥</div>
+          <div class="qs-value" id="quiz-streak-value">0</div>
+          <div class="qs-label">Combo</div>
+        </div>
+        <div class="quiz-stat timer">
+          <div class="qs-icon">⏱️</div>
+          <div class="qs-value" id="quiz-timer">30</div>
+          <div class="qs-label">Giây</div>
+        </div>
+        <div class="quiz-stat score">
+          <div class="qs-icon">⭐</div>
+          <div class="qs-value" id="quiz-score-value">0</div>
+          <div class="qs-label">Điểm</div>
+        </div>
+      </div>
+
+      <!-- Question Card -->
+      <div class="question-card">
+        <span class="question-type-badge badge-hhcn" id="question-badge">Hình hộp chữ nhật</span>
+        <p class="question-text" id="question-text">Loading...</p>
+
+        <div class="answer-options" id="answer-options">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Hint Box -->
+        <div class="hint-box" id="hint-box">
+          <h4>💡 Gợi ý giải</h4>
+          <p class="hint-formula" id="hint-formula"></p>
+          <ul class="hint-steps" id="hint-steps"></ul>
+        </div>
+
+        <!-- Actions -->
+        <div class="quiz-actions">
+          <button class="btn-hint" id="btn-quiz-hint">💡 Gợi ý</button>
+          <button class="btn-next" id="btn-quiz-next">Câu tiếp theo →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== BUILD SCREEN ==================== -->
+  <div id="screen-build" class="screen">
+    <div class="game-header">
+      <button class="btn-back">← Quay lại</button>
+      <span class="header-title" style="color: var(--color-orange);">🏗️ XÂY DỰNG</span>
+      <span></span>
+    </div>
+
+    <div class="build-container">
+      <!-- Left Panel -->
+      <div class="build-panel">
+        <!-- Scenario -->
+        <div class="scenario-card">
+          <span class="scenario-icon" id="scenario-icon">🎁</span>
+          <div class="scenario-title" id="scenario-title">Loading...</div>
+          <p class="scenario-desc" id="scenario-desc">Loading...</p>
+        </div>
+
+        <!-- Inputs -->
+        <div class="build-input-group" id="build-inputs">
+          <h3>📏 Nhập kích thước</h3>
+
+          <div id="build-box-inputs">
+            <div class="input-row">
+              <label>Chiều dài (a)</label>
+              <input type="number" id="build-dim-a" min="1" max="100" step="0.5" placeholder="cm">
+              <span class="unit">cm</span>
+            </div>
+            <div class="input-row">
+              <label>Chiều rộng (b)</label>
+              <input type="number" id="build-dim-b" min="1" max="100" step="0.5" placeholder="cm">
+              <span class="unit">cm</span>
+            </div>
+            <div class="input-row">
+              <label>Chiều cao (c)</label>
+              <input type="number" id="build-dim-c" min="1" max="100" step="0.5" placeholder="cm">
+              <span class="unit">cm</span>
+            </div>
+          </div>
+
+          <div id="build-cube-inputs" style="display: none;">
+            <div class="input-row">
+              <label>Cạnh (a)</label>
+              <input type="number" id="build-dim-a-cube" min="1" max="100" step="0.5" placeholder="cm">
+              <span class="unit">cm</span>
+            </div>
+          </div>
+
+          <button class="btn-build" id="btn-build-shape">🔨 Xây dựng hình 3D</button>
+        </div>
+
+        <!-- Challenge -->
+        <div class="build-challenge" id="build-challenge-card">
+          <h3>🧮 Thử thách tính toán</h3>
+          <p class="challenge-question" id="challenge-question"></p>
+          <p style="font-size: 0.8rem; color: var(--color-muted); margin-bottom: 12px;">
+            Công thức: <span style="color: var(--color-cyan); font-family: 'JetBrains Mono', monospace;" id="challenge-formula-name"></span>
+          </p>
+          <div class="challenge-input">
+            <input type="number" id="build-answer" placeholder="Nhập đáp án...">
+            <button class="btn-check" id="btn-check-answer">✓ Kiểm tra</button>
+          </div>
+          <div class="build-result" id="build-result"></div>
+          <button class="btn-new-scenario" id="btn-new-scenario">🔄 Nhiệm vụ mới</button>
+        </div>
+      </div>
+
+      <!-- 3D Viewer -->
+      <div class="build-viewer" id="build-viewer">
+        <div class="viewer-hint">🖱️ Kéo để xoay • Scroll để zoom</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== RESULT MODAL ==================== -->
+  <div class="modal-overlay" id="result-modal">
+    <div class="modal-content">
+      <span class="result-icon" id="result-icon">🏆</span>
+      <h2 class="result-title great" id="result-title">Xuất sắc!</h2>
+      <p class="result-subtitle" id="result-subtitle">Bạn thật giỏi!</p>
+
+      <div class="result-stats">
+        <div class="result-stat">
+          <div class="rs-value" id="result-score" style="color: var(--color-yellow);">0</div>
+          <div class="rs-label">Điểm</div>
+        </div>
+        <div class="result-stat">
+          <div class="rs-value" id="result-correct" style="color: var(--color-green);">0/10</div>
+          <div class="rs-label">Đúng</div>
+        </div>
+        <div class="result-stat">
+          <div class="rs-value" id="result-streak" style="color: var(--color-orange);">0</div>
+          <div class="rs-label">Max Combo</div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-modal primary" id="btn-retry">🔄 Chơi lại</button>
+        <button class="btn-modal secondary" id="btn-back-home">🏠 Trang chủ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SCRIPTS ==================== -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="sounds.js?v=4"></script>
+  <script src="scene3d.js?v=4"></script>
+  <script src="explore.js?v=4"></script>
+  <script src="quiz.js?v=4"></script>
+  <script src="build.js?v=4"></script>
+  <script src="app.js?v=4"></script>
+</body>
+</html>
