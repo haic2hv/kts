@@ -8,6 +8,8 @@ const ExploreMode = (() => {
   let dims = { a: 4, b: 3, c: 2 };
   let netCanvas = null;
   let showingNet = false;
+  let unfoldAnimId = null;
+  let isUnfoldPlaying = false;
 
   function init() {
     scene3d = new Scene3D('#explore-viewer');
@@ -97,21 +99,115 @@ const ExploreMode = (() => {
       const container = document.getElementById('net-container');
       if (showingNet) {
         container.style.display = 'block';
+        // Switch to unfolding 3D view
+        const slider = document.getElementById('unfold-slider');
+        const progress = slider ? parseFloat(slider.value) : 0;
+        scene3d.createUnfoldingShape(currentShape, dims, progress);
+        scene3d.setAutoRotate(false);
+        document.getElementById('btn-rotate')?.classList.remove('active');
         drawNet();
       } else {
         container.style.display = 'none';
+        // Restore normal shape
+        stopUnfoldAnimation();
+        scene3d.exitUnfolding();
+        scene3d.createShape(currentShape, dims);
+        // Reset slider
+        const slider = document.getElementById('unfold-slider');
+        if (slider) slider.value = 0;
+        const progressText = document.getElementById('unfold-progress-text');
+        if (progressText) progressText.textContent = '0%';
+        const playBtn = document.getElementById('btn-unfold-play');
+        if (playBtn) {
+          playBtn.textContent = '▶ Tự động mở';
+          playBtn.classList.remove('active');
+        }
+      }
+    });
+
+    // Unfold slider
+    document.getElementById('unfold-slider')?.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      scene3d.updateUnfoldProgress(val);
+      document.getElementById('unfold-progress-text').textContent = Math.round(val * 100) + '%';
+    });
+
+    // Auto play/pause
+    document.getElementById('btn-unfold-play')?.addEventListener('click', () => {
+      SoundEngine.click();
+      if (isUnfoldPlaying) {
+        stopUnfoldAnimation();
+      } else {
+        startUnfoldAnimation();
       }
     });
   }
 
+  function startUnfoldAnimation() {
+    isUnfoldPlaying = true;
+    const btn = document.getElementById('btn-unfold-play');
+    btn.textContent = '⏸ Tạm dừng';
+    btn.classList.add('active');
+
+    const slider = document.getElementById('unfold-slider');
+    const progressText = document.getElementById('unfold-progress-text');
+    let val = parseFloat(slider.value);
+
+    // If already at 1, reset to 0
+    if (val >= 0.99) {
+      val = 0;
+      slider.value = 0;
+      scene3d.updateUnfoldProgress(0);
+    }
+
+    const speed = 0.006; // progress per frame
+
+    function animateStep() {
+      val += speed;
+      if (val >= 1) {
+        val = 1;
+        slider.value = val;
+        scene3d.updateUnfoldProgress(val);
+        progressText.textContent = '100%';
+        stopUnfoldAnimation();
+        return;
+      }
+      slider.value = val;
+      scene3d.updateUnfoldProgress(val);
+      progressText.textContent = Math.round(val * 100) + '%';
+      unfoldAnimId = requestAnimationFrame(animateStep);
+    }
+
+    unfoldAnimId = requestAnimationFrame(animateStep);
+  }
+
+  function stopUnfoldAnimation() {
+    isUnfoldPlaying = false;
+    if (unfoldAnimId) {
+      cancelAnimationFrame(unfoldAnimId);
+      unfoldAnimId = null;
+    }
+    const btn = document.getElementById('btn-unfold-play');
+    if (btn) {
+      btn.textContent = '▶ Tự động mở';
+      btn.classList.remove('active');
+    }
+  }
+
   function updateShape() {
-    if (currentShape === 'cube') {
-      scene3d.createShape('cube', dims);
+    if (showingNet) {
+      const slider = document.getElementById('unfold-slider');
+      const progress = slider ? parseFloat(slider.value) : 0;
+      scene3d.createUnfoldingShape(currentShape, dims, progress);
+      drawNet();
     } else {
-      scene3d.createShape('box', dims);
+      if (currentShape === 'cube') {
+        scene3d.createShape('cube', dims);
+      } else {
+        scene3d.createShape('box', dims);
+      }
     }
     updateInfo();
-    if (showingNet) drawNet();
   }
 
   function updateInfo() {
@@ -167,9 +263,11 @@ const ExploreMode = (() => {
       c = dims.c;
     }
 
-    // Scale to fit canvas
-    const totalW = a + 2 * c + a; // width of net
-    const totalH = c + b + c; // height of net
+    // Net layout matching the 3D unfolding:
+    // Horizontal strip: Left(b×c) - Front(a×c) - Right(b×c) - Back(a×c)
+    // Top(a×b) above Front, Bottom(a×b) below Front
+    const totalW = b + a + b + a; // width of net
+    const totalH = b + c + b; // height of net
     const padding = 40;
     const scale = Math.min(
       (canvas.width - padding * 2) / totalW,
@@ -182,13 +280,13 @@ const ExploreMode = (() => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const faces = [
-      // [x, y, w, h, color, label]
-      [c, 0, a, c, 'rgba(25, 153, 85, 0.4)', 'Mặt trên'],        // top
-      [0, c, c, b, 'rgba(0, 136, 204, 0.4)', 'Mặt trái'],         // left
-      [c, c, a, b, 'rgba(168, 85, 247, 0.4)', 'Mặt trước'],       // front
-      [c + a, c, c, b, 'rgba(0, 212, 255, 0.4)', 'Mặt phải'],     // right
-      [c + a + c, c, a, b, 'rgba(119, 51, 187, 0.4)', 'Mặt sau'], // back
-      [c, c + b, a, c, 'rgba(17, 153, 85, 0.4)', 'Mặt dưới'],    // bottom
+      // [x, y, w, h, color, label] — matches 3D unfolding layout
+      [b, 0, a, b, 'rgba(34, 255, 136, 0.4)', 'Mặt trên'],        // top (above front)
+      [0, b, b, c, 'rgba(0, 136, 204, 0.4)', 'Mặt trái'],         // left
+      [b, b, a, c, 'rgba(168, 85, 247, 0.4)', 'Mặt trước'],       // front (base)
+      [b + a, b, b, c, 'rgba(0, 212, 255, 0.4)', 'Mặt phải'],     // right
+      [b + a + b, b, a, c, 'rgba(119, 51, 187, 0.4)', 'Mặt sau'], // back
+      [b, b + c, a, b, 'rgba(17, 153, 85, 0.4)', 'Mặt dưới'],    // bottom (below front)
     ];
 
     faces.forEach(([fx, fy, fw, fh, color, label]) => {
@@ -221,15 +319,18 @@ const ExploreMode = (() => {
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.font = '13px Inter, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Hình khai triển', canvas.width / 2, canvas.height - 10);
+    ctx.fillText('Hình khai triển 2D', canvas.width / 2, canvas.height - 10);
   }
 
   function destroy() {
     if (scene3d) {
+      stopUnfoldAnimation();
+      scene3d.exitUnfolding();
       scene3d.dispose();
       scene3d = null;
     }
     showingNet = false;
+    isUnfoldPlaying = false;
   }
 
   return { init, destroy, updateShape };
